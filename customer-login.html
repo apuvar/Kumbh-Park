@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Login | KumbhPark – Smart Parking System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="auth-page-wrapper">
+    <div class="auth-box">
+      <div class="auth-header">
+        <a href="index.html" class="auth-logo">
+          <div class="brand-icon">🅿</div>
+          <div class="brand-info" style="text-align:left">
+            <h2 style="font-size:22px">Kumbh<span style="color:var(--accent)">Park</span></h2>
+            <p style="font-size:10px;color:var(--text-muted)">Smart Parking System</p>
+          </div>
+        </a>
+        <h2>Visitor Sign In</h2>
+        <p>Log in with your registered account to search and book parking slots.</p>
+      </div>
+
+      <div id="authAlert"></div>
+
+      <form id="customerLoginForm">
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="loginEmail" class="form-control" placeholder="your-email@example.com" required>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required>
+        </div>
+        <button type="submit" id="submitBtn" class="btn-primary" style="width:100%;justify-content:center;padding:13px">
+          Sign In to Customer Dashboard →
+        </button>
+      </form>
+
+      <div style="margin-top:22px;text-align:center;font-size:12.5px;color:var(--text-muted);display:flex;flex-direction:column;gap:8px">
+        <div>Don't have an account? <a href="customer-register.html" style="color:var(--primary);font-weight:700">Register as Visitor</a></div>
+        <div style="border-top:1px solid var(--border-light);padding-top:10px">
+          Are you a Parking Provider? <a href="provider-login.html" style="color:var(--accent-dark);font-weight:700">Go to Provider Portal →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script>
+    // If already logged in as customer, redirect
+    const existing = getUser();
+    if (existing && existing.role === "customer") {
+      const returnUrl = safeRedirectTarget(
+        new URLSearchParams(location.search).get("redirect"),
+        "customer-dashboard.html"
+      );
+      location.replace(returnUrl);
+    }
+
+    document.getElementById("customerLoginForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value.trim();
+      const alertBox = document.getElementById("authAlert");
+      const submitBtn = document.getElementById("submitBtn");
+      alertBox.innerHTML = "";
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Authenticating...";
+
+      try {
+        clearUserState();
+
+        const res = await api("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, role: "customer" })
+        });
+
+        if (res && res.user && res.user.id) {
+          saveUser(res.user);
+          showToast(`Welcome back, ${res.user.name}!`, "success");
+          const returnUrl = safeRedirectTarget(
+            new URLSearchParams(location.search).get("redirect"),
+            "customer-dashboard.html"
+          );
+          setTimeout(() => location.href = returnUrl, 350);
+        } else {
+          throw new Error("Invalid response from server.");
+        }
+      } catch (err) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Sign In to Customer Dashboard →";
+        alertBox.innerHTML = `<div class="alert-message error">${escapeHtml(err.message)}</div>`;
+      }
+    };
+  </script>
+</body>
+</html>

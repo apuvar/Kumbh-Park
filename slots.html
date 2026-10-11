@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parking Details & Visual Slots | KumbhPark – Smart Parking System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container" id="appShell">
+    <main class="app-main" id="appMain">
+      <div class="page-body">
+
+        <!-- Zone Details & Switcher Topbar -->
+        <div class="dashboard-panel" style="padding:24px;margin-bottom:24px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:18px">
+            <div>
+              <span class="status-tag confirmed" style="margin-bottom:8px">● LIVE SMART BAYS</span>
+              <h2 id="currentZoneName" style="font-size:24px">Zone A – Ramkund</h2>
+              <p id="currentZoneLocation" style="color:var(--text-muted);font-size:13px;margin-top:2px">
+                📍 Near Ramkund Ghat, Godavari Bank • 0.8 km from Holy Dip Ghat
+              </p>
+            </div>
+
+            <!-- Zone Selector Dropdown -->
+            <div style="display:flex;align-items:center;gap:12px">
+              <label style="font-size:12px;font-weight:700;color:var(--text-muted)">SWITCH ZONE:</label>
+              <select id="zonePicker" class="form-control" style="width:230px;font-weight:600">
+                <!-- Populated by JS -->
+              </select>
+            </div>
+          </div>
+
+          <!-- Zone Facility Pills -->
+          <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap" id="zoneFeaturesPills">
+            <span class="status-tag" style="background:#f1f5f9;color:#334155">📹 CCTV Monitored</span>
+            <span class="status-tag" style="background:#f1f5f9;color:#334155">⚡ EV Fast Charging</span>
+            <span class="status-tag" style="background:#f1f5f9;color:#334155">👮 24/7 Security</span>
+            <span class="status-tag" style="background:#f1f5f9;color:#334155">♿ Wheelchair Friendly</span>
+          </div>
+
+          <!-- Quick Metrics Bar -->
+          <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:14px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border-light)">
+            <div>
+              <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Hourly Rate</span>
+              <strong id="zoneRate" style="display:block;font-size:18px;color:var(--accent-dark);margin-top:2px">₹30/hr</strong>
+            </div>
+            <div>
+              <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Available Bays</span>
+              <strong id="zoneAvail" style="display:block;font-size:18px;color:var(--primary);margin-top:2px">245</strong>
+            </div>
+            <div>
+              <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Total Capacity</span>
+              <strong id="zoneCap" style="display:block;font-size:18px;color:var(--text-main);margin-top:2px">400</strong>
+            </div>
+            <div>
+              <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Operating Hours</span>
+              <strong style="display:block;font-size:18px;color:var(--text-main);margin-top:2px">24 Hours (Open)</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- The Visual Parking Deck (Authentic Parking Lot Layout) -->
+        <div id="visualDeckContainer">
+          <!-- Rendered by renderVisualParkingDeck in common.js -->
+        </div>
+
+        <!-- Selected Slot Action Drawer -->
+        <div class="slot-detail-drawer" id="selectedSlotDrawer">
+          <div class="selected-slot-badge">
+            <div class="slot-big-number" id="drawerSlotNum">P01</div>
+            <div class="slot-meta">
+              <h4 id="drawerSlotHeading">Slot P01 Selected</h4>
+              <p id="drawerSlotDesc">Available for reservation • Ground Bay A • Standard Vehicle</p>
+            </div>
+          </div>
+          <div class="slot-action-area">
+            <div style="text-align:right">
+              <span style="font-size:11px;color:var(--text-muted);display:block">RATE ESTIMATE</span>
+              <strong id="drawerSlotPrice" style="font-size:18px;color:var(--accent-dark)">₹30 / hour</strong>
+            </div>
+            <button id="proceedBookingBtn" class="btn-primary" style="padding:12px 24px;font-size:14px">
+              Proceed to Book Slot →
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script>
+    // Parking details / slot selection requires customer login
+    const user = requireRole("customer");
+    let currentZoneId = Number(new URLSearchParams(location.search).get("zone") || 0);
+    let allZones = [];
+    let currentSlots = [];
+    let selectedSlotNum = "";
+
+    async function initSlotsPage() {
+      if (!user) return;
+
+      renderAppShell({
+        title: "Parking Details & Slots",
+        activeKey: "parking-details",
+        subtitle: "Visual Bay Availability"
+      });
+
+      try {
+        allZones = await api("/api/parking");
+        if (!allZones.length) {
+          document.getElementById("currentZoneName").textContent = "No zones available";
+          return;
+        }
+        if (!currentZoneId || !allZones.some(z => z.id === currentZoneId)) {
+          currentZoneId = allZones[0].id;
+        }
+        const picker = document.getElementById("zonePicker");
+        picker.innerHTML = allZones.map(z => `
+          <option value="${z.id}" ${z.id === currentZoneId ? 'selected' : ''}>${escapeHtml(z.name || z.zone_name)}</option>
+        `).join("");
+
+        picker.onchange = () => {
+          currentZoneId = Number(picker.value);
+          selectedSlotNum = "";
+          loadZoneData();
+        };
+
+        loadZoneData();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function loadZoneData() {
+      const zone = allZones.find(z => z.id === currentZoneId) || allZones[0];
+      if (!zone) return;
+      currentZoneId = zone.id;
+
+      // Update Zone Info
+      document.getElementById("currentZoneName").textContent = zone.name || zone.zone_name;
+      document.getElementById("currentZoneLocation").textContent = `📍 ${zone.location} • ${zone.distance || 'Near Ghats'}`;
+      document.getElementById("zoneRate").textContent = `₹${zone.rate}/hr`;
+      document.getElementById("zoneAvail").textContent = zone.available_slots || zone.available;
+      document.getElementById("zoneCap").textContent = zone.capacity;
+
+      // Load Slots
+      try {
+        currentSlots = await api(`/api/zones/${currentZoneId}/slots`);
+      } catch (e) {
+        currentSlots = generateInitialSlots(currentZoneId);
+      }
+
+      // Pick first available slot by default if none selected
+      if (!selectedSlotNum) {
+        const firstAvail = currentSlots.find(s => s.status === "available");
+        if (firstAvail) selectedSlotNum = firstAvail.slot_number;
+      }
+
+      // Render Visual Parking Deck
+      renderVisualParkingDeck({
+        containerId: "visualDeckContainer",
+        slots: currentSlots,
+        selectedSlot: selectedSlotNum,
+        zoneName: zone.name || zone.zone_name,
+        onSlotSelect: (slotCode) => {
+          selectedSlotNum = slotCode;
+          updateDrawer();
+          loadZoneData(); // re-render with selected outline
+        }
+      });
+
+      updateDrawer();
+    }
+
+    function updateDrawer() {
+      const drawer = document.getElementById("selectedSlotDrawer");
+      const btn = document.getElementById("proceedBookingBtn");
+      const slotObj = currentSlots.find(s => s.slot_number === selectedSlotNum);
+      const zone = allZones.find(z => z.id === currentZoneId) || allZones[0];
+
+      if (!slotObj || slotObj.status !== "available") {
+        document.getElementById("drawerSlotNum").textContent = "--";
+        document.getElementById("drawerSlotHeading").textContent = "No Available Slot Selected";
+        document.getElementById("drawerSlotDesc").textContent = "Please click any green available slot on the parking deck above.";
+        btn.disabled = true;
+        btn.style.opacity = "0.5";
+        btn.style.cursor = "not-allowed";
+        btn.onclick = null;
+        return;
+      }
+
+      document.getElementById("drawerSlotNum").textContent = slotObj.slot_number;
+      document.getElementById("drawerSlotHeading").textContent = `Slot ${slotObj.slot_number} Selected (${slotObj.type || 'Standard Bay'})`;
+      document.getElementById("drawerSlotDesc").textContent = `Ready for reservation at ${zone.name || zone.zone_name} • Ground Level`;
+      document.getElementById("drawerSlotPrice").textContent = `₹${zone.rate} / hour`;
+      
+      btn.disabled = false;
+      btn.style.opacity = "1";
+      btn.style.cursor = "pointer";
+      btn.onclick = () => {
+        location.href = `booking.html?zone=${currentZoneId}&slot=${encodeURIComponent(slotObj.slot_number)}`;
+      };
+    }
+
+    initSlotsPage();
+  </script>
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Map & Navigation | KumbhPark – Smart Parking System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container" id="appShell">
+    <main class="app-main" id="appMain">
+      <div class="page-body">
+
+        <!-- Header -->
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:20px">
+          <div>
+            <h2 style="font-size:24px">Kumbh Mela Parking Map & Navigation</h2>
+            <p style="font-size:13px;color:var(--text-muted);margin-top:2px">
+              Click on any parking zone pin along the Godavari river to view real-time vacancy and start navigation.
+            </p>
+          </div>
+          <div style="display:flex;gap:10px">
+            <a href="parking.html" class="btn-secondary">📋 Zone List View</a>
+            <a href="slots.html" class="btn-primary">🅿️ Visual Slots</a>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;align-items:start">
+          
+          <!-- Interactive Map Container -->
+          <div class="map-canvas-container" id="mapCanvas">
+            <!-- Godavari River -->
+            <div class="map-godavari-river"></div>
+            <div class="map-river-label">🌊 GODAVARI RIVER</div>
+
+            <!-- Roads -->
+            <div class="map-road r1"></div>
+            <div class="map-road r2"></div>
+            <div class="map-road r3"></div>
+
+            <!-- Landmarks -->
+            <div class="map-landmark" style="top:95px;left:420px;background:#fef3c7;border:1px solid #fde68a">
+              🛕 RAMKUND GHAT (HOLY DIP)
+            </div>
+            <div class="map-landmark" style="top:220px;left:130px;background:#fef3c7;border:1px solid #fde68a">
+              🛕 KALARAM TEMPLE
+            </div>
+            <div class="map-landmark" style="top:340px;left:440px;background:#fef3c7;border:1px solid #fde68a">
+              🏕️ TAPOVAN SADHUGRAM
+            </div>
+
+            <!-- Dynamic Clickable Zone Pins -->
+            <div id="dynamicMapPinsContainer"></div>
+          </div>
+
+          <!-- Selected Zone Navigation Card -->
+          <div class="dashboard-panel" id="zoneDetailPanel" style="margin-bottom:0">
+            <span class="status-tag confirmed" style="margin-bottom:10px">📍 SELECTED DESTINATION</span>
+            <h3 id="panelZoneName" style="font-size:20px;margin-bottom:4px">Loading...</h3>
+            <p id="panelZoneLoc" style="font-size:12px;color:var(--text-muted);margin-bottom:16px">
+              Select any zone pin on the map
+            </p>
+
+            <div style="background:var(--bg-page);border-radius:var(--radius-md);padding:16px;margin-bottom:16px">
+              <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:12px">
+                <span style="color:var(--text-muted)">Distance from Ghat</span>
+                <b id="panelZoneDist">0.8 km (4 mins drive)</b>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:12px">
+                <span style="color:var(--text-muted)">Available Bays</span>
+                <b id="panelZoneAvail" style="color:var(--primary)">0 slots free</b>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:12px">
+                <span style="color:var(--text-muted)">Hourly Rate</span>
+                <b id="panelZoneRate" style="color:var(--accent-dark)">₹0 / hour</b>
+              </div>
+            </div>
+
+            <!-- Route Steps -->
+            <div style="border:1px dashed var(--border-light);border-radius:var(--radius-sm);padding:14px;margin-bottom:18px">
+              <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:8px">
+                🧭 Turn-by-Turn Route Guidance
+              </span>
+              <div style="font-size:12px;display:flex;flex-direction:column;gap:6px">
+                <div>1. Follow designated Kumbh Mela arterial ring road.</div>
+                <div>2. Watch for digital overhead parking guidance signs.</div>
+                <div>3. Enter designated Parking Gate with your verified KumbhPark digital pass.</div>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <a href="slots.html" id="panelSlotsBtn" class="btn-primary" style="justify-content:center">
+                🅿️ View Visual Slots
+              </a>
+              <a id="panelDirectionsBtn" href="https://maps.google.com" target="_blank" rel="noopener noreferrer" class="btn-accent" style="justify-content:center;text-decoration:none;display:flex;align-items:center;gap:6px">
+                🧭 Open in Google Maps & Navigate ↗
+              </a>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script>
+    let zones = [];
+
+    // Verified coordinates around Nashik Kumbh Mela Ghats and parking grounds
+    const NASHIK_ZONE_COORDS = {
+      1: { lat: 20.0063, lng: 73.7915, top: 70, left: 210 },  // Ramkund Ghat
+      2: { lat: 20.0095, lng: 73.7958, top: 180, left: 280 }, // Panchavati Ground
+      3: { lat: 19.9975, lng: 73.8120, top: 320, left: 260 }, // Tapovan Area
+      4: { lat: 20.0210, lng: 73.7540, top: 220, left: 560 }  // Gangapur Road Area
+    };
+
+    const FALLBACK_PINS = [
+      { top: 70, left: 210 },
+      { top: 180, left: 280 },
+      { top: 320, left: 260 },
+      { top: 220, left: 560 },
+      { top: 110, left: 510 },
+      { top: 280, left: 160 },
+      { top: 350, left: 520 },
+      { top: 140, left: 380 }
+    ];
+
+    async function initMapPage() {
+      renderAppShell({
+        title: "Map & Navigation",
+        activeKey: "map",
+        subtitle: "Parking Locations"
+      });
+
+      try {
+        zones = await api("/api/parking");
+        renderMapPins();
+        if (zones.length) {
+          selectMapZone(zones[0].id);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function renderMapPins() {
+      const container = document.getElementById("dynamicMapPinsContainer");
+      if (!container) return;
+
+      container.innerHTML = zones.map((z, idx) => {
+        const coords = (NASHIK_ZONE_COORDS[z.id]) || FALLBACK_PINS[idx % FALLBACK_PINS.length];
+        const avail = Number(z.available_slots || z.available || 0);
+        const cap = Number(z.capacity || 1);
+        const percent = Math.round((avail / cap) * 100);
+        const statusClass = percent < 20 ? 'booked' : (percent < 50 ? 'reserved' : 'available');
+
+        return `
+          <div class="map-pin-marker" style="top:${coords.top}px;left:${coords.left}px" onclick="selectMapZone(${z.id})">
+            <div class="map-pin-bubble">
+              <span class="pin-dot ${statusClass}"></span>
+              <span>${escapeHtml(z.name || z.zone_name)} • ${avail} Free</span>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function selectMapZone(id) {
+      const z = zones.find(x => x.id === id) || zones[0];
+      if (!z) return;
+
+      const avail = Number(z.available_slots || z.available || 0);
+      const cap = Number(z.capacity || 1);
+      const name = z.name || z.zone_name;
+
+      document.getElementById("panelZoneName").textContent = name;
+      document.getElementById("panelZoneLoc").textContent = `📍 ${z.location}`;
+      document.getElementById("panelZoneDist").textContent = `${z.distance || '1.0 km'} (5 mins)`;
+      document.getElementById("panelZoneAvail").textContent = `${avail} of ${cap} slots free`;
+      document.getElementById("panelZoneRate").textContent = `₹${z.rate} / hour`;
+      document.getElementById("panelSlotsBtn").href = `slots.html?zone=${z.id}`;
+
+      // Google Maps Destination & Directions link
+      const coords = NASHIK_ZONE_COORDS[z.id];
+      const directionsUrl = coords 
+        ? `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}`
+        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + z.location + ' Nashik')}`;
+      
+      const dirBtn = document.getElementById("panelDirectionsBtn");
+      if (dirBtn) dirBtn.href = directionsUrl;
+
+      showToast(`Selected ${name}`, "info");
+    }
+
+    initMapPage();
+  </script>
+</body>
+</html>

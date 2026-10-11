@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="450" viewBox="0 0 900 450">
+<rect width="900" height="450" fill="#edf8f3"/>
+<rect x="80" y="110" width="740" height="250" rx="30" fill="#d7e9df"/>
+<path d="M120 250 H780 M250 130 V340 M450 130 V340 M650 130 V340" stroke="#ffffff" stroke-width="18"/>
+<circle cx="450" cy="225" r="72" fill="#176b4d"/><text x="450" y="245" text-anchor="middle" font-family="Arial" font-size="80" fill="white">P</text>
+<text x="450" y="70" text-anchor="middle" font-family="Arial" font-size="34" font-weight="700" fill="#176b4d">KumbhPark Parking</text>
+<text x="450" y="410" text-anchor="middle" font-family="Arial" font-size="20" fill="#5c6d66">Demo image for Assignment 1</text>
+</svg>

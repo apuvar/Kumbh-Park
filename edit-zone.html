@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Parking Zone | KumbhPark – Smart Parking System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container" id="appShell">
+    <main class="app-main" id="appMain">
+      <div class="page-body">
+
+        <div style="max-width:720px;margin:20px auto">
+          <div class="dashboard-panel" style="padding:32px">
+            <div style="margin-bottom:24px;border-bottom:1px solid var(--border-light);padding-bottom:18px">
+              <span class="status-tag" style="background:var(--accent-subtle);color:var(--accent-dark);margin-bottom:6px">✏️ EDIT FACILITY</span>
+              <h2 style="font-size:24px">Edit Parking Zone Details</h2>
+              <p style="font-size:13px;color:var(--text-muted);margin-top:2px">
+                Modify capacity, rates or address information for this facility.
+              </p>
+            </div>
+
+            <div id="zoneAlert"></div>
+
+            <form id="editZoneForm">
+              <div class="form-group">
+                <label>Parking Zone Name *</label>
+                <input type="text" id="zoneName" class="form-control" required>
+              </div>
+
+              <div class="form-group">
+                <label>Physical Location / Landmark *</label>
+                <input type="text" id="zoneLocation" class="form-control" required>
+              </div>
+
+              <div class="form-grid-2">
+                <div class="form-group">
+                  <label>Total Space Capacity *</label>
+                  <input type="number" id="zoneCapacity" class="form-control" min="10" required>
+                </div>
+                <div class="form-group">
+                  <label>Hourly Rate (₹ / hour) *</label>
+                  <input type="number" id="zoneRate" class="form-control" min="5" required>
+                </div>
+              </div>
+
+              <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:24px">
+                <a href="provider-zones.html" class="btn-secondary" style="padding:11px 20px">Cancel</a>
+                <button type="submit" class="btn-primary" style="padding:11px 26px">
+                  Save Changes →
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script>
+    const user = requireRole("provider");
+    const zoneId = new URLSearchParams(location.search).get("id");
+
+    async function initEditZone() {
+      if (!user) return;
+
+      renderAppShell({
+        title: "Edit Parking Zone",
+        activeKey: "provider-zones",
+        subtitle: "Update Zone"
+      });
+
+      if (!zoneId) {
+        location.href = "provider-zones.html";
+        return;
+      }
+
+      try {
+        const z = await api(`/api/providers/${user.id}/zones/${zoneId}`);
+        document.getElementById("zoneName").value = z.name || z.zone_name;
+        document.getElementById("zoneLocation").value = z.location;
+        document.getElementById("zoneCapacity").value = z.capacity;
+        document.getElementById("zoneRate").value = z.rate;
+      } catch (e) {
+        showToast("Error loading zone details", "error");
+      }
+
+      document.getElementById("editZoneForm").onsubmit = async (e) => {
+        e.preventDefault();
+        const payload = {
+          zone_name: document.getElementById("zoneName").value.trim(),
+          name: document.getElementById("zoneName").value.trim(),
+          location: document.getElementById("zoneLocation").value.trim(),
+          capacity: Number(document.getElementById("zoneCapacity").value),
+          rate: Number(document.getElementById("zoneRate").value)
+        };
+
+        try {
+          await api(`/api/providers/${user.id}/zones/${zoneId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          showToast("Zone updated successfully", "success");
+          setTimeout(() => location.href = "provider-zones.html", 400);
+        } catch (err) {
+          document.getElementById("zoneAlert").innerHTML = `<div class="alert-message error">${escapeHtml(err.message || "Update failed")}</div>`;
+        }
+      };
+    }
+
+    initEditZone();
+  </script>
+</body>
+</html>

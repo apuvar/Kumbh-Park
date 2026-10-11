@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Parking Slots | KumbhPark – Smart Parking System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container" id="appShell">
+    <main class="app-main" id="appMain">
+      <div class="page-body">
+
+        <!-- Header Panel with Zone Switcher -->
+        <div class="dashboard-panel" style="padding:24px;margin-bottom:24px">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px">
+            <div>
+              <span class="status-tag" style="background:var(--accent-subtle);color:var(--accent-dark);margin-bottom:6px">🎛️ PROVIDER SLOT OPERATIONS</span>
+              <h2 style="font-size:24px">Manage Parking Slots Status</h2>
+              <p style="font-size:13px;color:var(--text-muted);margin-top:2px">
+                Update individual slot bay status (Available, Booked, Reserved, Maintenance) for your grounds.
+              </p>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <label style="font-size:12px;font-weight:700;color:var(--text-muted)">SELECT ZONE:</label>
+              <select id="provZoneSelect" class="form-control" style="width:230px;font-weight:600">
+                <!-- Injected by JS -->
+              </select>
+              <button onclick="openAddSlotModal()" class="btn-primary" style="font-size:13px;padding:9px 16px">
+                ➕ Add Slot
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add Slot Modal -->
+        <div class="modal-overlay" id="addSlotModal">
+          <div class="modal-dialog" style="max-width:440px">
+            <div class="modal-header">
+              <h3>➕ Add New Parking Slot Bay</h3>
+              <button class="modal-close-btn" onclick="closeAddSlotModal()">✕</button>
+            </div>
+            <div class="modal-body">
+              <div id="addSlotAlert"></div>
+              <form id="addSlotForm">
+                <div class="form-group">
+                  <label>Selected Zone</label>
+                  <input type="text" id="addSlotZoneName" class="form-control" readonly style="background:#f1f5f9;font-weight:600">
+                </div>
+                <div class="form-group">
+                  <label>Slot Bay Number / Code *</label>
+                  <input type="text" id="addSlotNumber" class="form-control" placeholder="e.g. P12, P13, P14" required style="text-transform:uppercase">
+                  <small style="color:var(--text-muted);font-size:11px">Unique identifier for this bay within this zone.</small>
+                </div>
+                <div class="form-group">
+                  <label>Initial Status</label>
+                  <select id="addSlotStatus" class="form-control">
+                    <option value="available" selected>🟢 Available</option>
+                    <option value="reserved">🟡 Reserved</option>
+                    <option value="unavailable">⚪ Maintenance</option>
+                  </select>
+                </div>
+                <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+                  <button type="button" class="btn-secondary" onclick="closeAddSlotModal()">Cancel</button>
+                  <button type="submit" id="addSlotSubmitBtn" class="btn-primary">Save Slot Bay →</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Visual Slot Management Deck -->
+        <div class="dashboard-panel" style="padding:28px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:14px">
+            <div>
+              <h3 id="currentZoneTitle" style="font-size:18px">Zone A – Ramkund Bays</h3>
+              <p style="font-size:12px;color:var(--text-muted)">Change any bay status below. Changes take effect in real time.</p>
+            </div>
+            <!-- Status Legend -->
+            <div class="slot-legend">
+              <div class="legend-item"><span class="legend-dot available"></span> Available</div>
+              <div class="legend-item"><span class="legend-dot booked"></span> Booked</div>
+              <div class="legend-item"><span class="legend-dot reserved"></span> Reserved</div>
+              <div class="legend-item"><span class="legend-dot unavailable"></span> Maintenance</div>
+            </div>
+          </div>
+
+          <div id="providerSlotsGrid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));gap:18px">
+            <!-- Slot Cards with Status Selectors -->
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script>
+    const user = requireRole("provider");
+    let provZones = [];
+    let activeZoneId = Number(new URLSearchParams(location.search).get("zone") || 0);
+
+    async function initManageSlots() {
+      if (!user) return;
+
+      renderAppShell({
+        title: "Manage Slots",
+        activeKey: "manage-slots",
+        subtitle: "Bay Status Control"
+      });
+
+      try {
+        provZones = await api(`/api/providers/${user.id}/zones`);
+        if (!provZones.length) {
+          document.getElementById("providerSlotsGrid").innerHTML = `
+            <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted)">
+              No zones found.<br>
+              <a href="add-zone.html" class="btn-primary" style="display:inline-flex;margin-top:12px;font-size:12px">+ Add Parking Zone</a>
+            </div>`;
+          return;
+        }
+
+        const select = document.getElementById("provZoneSelect");
+        select.innerHTML = provZones.map(z => `
+          <option value="${z.id}" ${z.id === activeZoneId ? 'selected' : ''}>${escapeHtml(z.name || z.zone_name)}</option>
+        `).join("");
+
+        activeZoneId = activeZoneId && provZones.some(z => z.id === activeZoneId) ? activeZoneId : provZones[0].id;
+        select.value = activeZoneId;
+
+        select.onchange = () => {
+          activeZoneId = Number(select.value);
+          loadSlotsForZone();
+        };
+
+        loadSlotsForZone();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function loadSlotsForZone() {
+      const zObj = provZones.find(z => z.id === activeZoneId) || provZones[0];
+      document.getElementById("currentZoneTitle").textContent = `${zObj.name || zObj.zone_name} • Slot Bays`;
+
+      try {
+        const slots = await api(`/api/providers/${user.id}/zones/${activeZoneId}/slots`);
+        const grid = document.getElementById("providerSlotsGrid");
+
+        grid.innerHTML = slots.map(s => {
+          const normStatus = (s.status === "occupied") ? "booked" : (s.status === "maintenance" ? "unavailable" : s.status);
+          return `
+            <div style="background:var(--bg-page);border:2px solid;border-radius:var(--radius-md);padding:14px;text-align:center;border-color:${getBorderColor(normStatus)}">
+              <div style="font-family:monospace;font-size:20px;font-weight:800;color:var(--text-main);margin-bottom:6px">
+                ${escapeHtml(s.slot_number)}
+              </div>
+              <span class="status-tag ${normStatus}" style="margin-bottom:10px">${normStatus}</span>
+              <div class="form-group" style="margin-bottom:0">
+                <label style="font-size:10px;text-transform:uppercase;color:var(--text-muted)">Set Status:</label>
+                <select class="form-control" style="font-size:12px;padding:6px 8px" onchange="changeSlotStatus(${s.id}, this.value, '${escapeHtml(s.slot_number)}')">
+                  <option value="available" ${normStatus === 'available' ? 'selected' : ''}>🟢 Available</option>
+                  <option value="booked" ${normStatus === 'booked' ? 'selected' : ''}>🔴 Booked</option>
+                  <option value="reserved" ${normStatus === 'reserved' ? 'selected' : ''}>🟡 Reserved</option>
+                  <option value="unavailable" ${normStatus === 'unavailable' ? 'selected' : ''}>⚪ Maintenance</option>
+                </select>
+              </div>
+            </div>
+          `;
+        }).join("");
+
+      } catch (err) {
+        document.getElementById("providerSlotsGrid").innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--text-muted)">Unable to load slots.</div>';
+      }
+    }
+
+    function getBorderColor(status) {
+      if (status === "available") return "#10b981";
+      if (status === "booked") return "#ef4444";
+      if (status === "reserved") return "#f59e0b";
+      return "#94a3b8";
+    }
+
+    async function changeSlotStatus(slotId, newStatus, slotNumber) {
+      try {
+        await api(`/api/providers/${user.id}/slots/${slotId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus })
+        });
+        showToast(`Slot ${slotNumber} marked as ${newStatus.toUpperCase()}`, "success");
+        loadSlotsForZone();
+      } catch (e) {
+        showToast(e.message || "Failed to update slot status", "error");
+      }
+    }
+
+    function openAddSlotModal() {
+      const zObj = provZones.find(z => z.id === activeZoneId) || provZones[0];
+      if (!zObj) {
+        showToast("Please select a parking zone first.", "error");
+        return;
+      }
+      document.getElementById("addSlotZoneName").value = zObj.name || zObj.zone_name;
+      document.getElementById("addSlotNumber").value = "";
+      document.getElementById("addSlotAlert").innerHTML = "";
+      document.getElementById("addSlotModal").classList.add("open");
+    }
+
+    function closeAddSlotModal() {
+      document.getElementById("addSlotModal").classList.remove("open");
+    }
+
+    document.getElementById("addSlotForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const slotNumber = document.getElementById("addSlotNumber").value.trim().toUpperCase();
+      const status = document.getElementById("addSlotStatus").value;
+      const submitBtn = document.getElementById("addSlotSubmitBtn");
+      const alertBox = document.getElementById("addSlotAlert");
+      alertBox.innerHTML = "";
+
+      if (!slotNumber) {
+        alertBox.innerHTML = '<div class="alert-message error">Please enter a slot number (e.g. P12).</div>';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Adding Bay...";
+
+      try {
+        const res = await api(`/api/providers/${user.id}/zones/${activeZoneId}/slots`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slot_number: slotNumber, status })
+        });
+
+        showToast(`Slot ${slotNumber} added successfully!`, "success");
+        closeAddSlotModal();
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Save Slot Bay →";
+        await loadSlotsForZone();
+      } catch (err) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Save Slot Bay →";
+        alertBox.innerHTML = `<div class="alert-message error">${escapeHtml(err.message || "Failed to add slot bay.")}</div>`;
+      }
+    };
+
+    initManageSlots();
+  </script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Booking Confirmed | KumbhPark – Smart Parking System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container" id="appShell">
+    <main class="app-main" id="appMain">
+      <div class="page-body">
+
+        <div style="max-width:680px;margin:20px auto">
+          <div class="dashboard-panel" style="padding:32px;text-align:center">
+            
+            <div style="width:72px;height:72px;border-radius:50%;background:var(--slot-available-bg);color:var(--primary);font-size:36px;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;border:2px solid var(--primary-light)">
+              ✓
+            </div>
+
+            <h2 style="font-size:26px;color:var(--primary)">Parking Booking Confirmed!</h2>
+            <p style="font-size:13px;color:var(--text-muted);margin:6px 0 24px">
+              Your parking slot is securely reserved. Present this digital pass at the entrance gate.
+            </p>
+
+            <!-- Digital E-Ticket Card -->
+            <div class="eticket-card" id="ticketCard" style="text-align:left;margin-bottom:28px">
+              <div class="eticket-header">
+                <div>
+                  <span class="status-tag confirmed" style="font-size:10px;margin-bottom:4px">● VERIFIED PILGRIM PASS</span>
+                  <h3 id="ticketZoneName" style="color:var(--primary);font-size:18px">Zone A – Ramkund</h3>
+                  <p style="font-size:11.5px;color:var(--text-muted)">Pass Reference: <b id="ticketCode" style="font-family:monospace;color:var(--text-main)">KP1001</b></p>
+                </div>
+                <div class="eticket-qr">
+                  <span style="font-size:32px">📱</span>
+                  <span>SCAN AT GATE</span>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:12.5px" id="ticketDetailsGrid">
+                <div>
+                  <span style="color:var(--text-muted);display:block;font-size:10.5px">PARKING SLOT</span>
+                  <b id="ticketSlot" style="font-size:22px;color:var(--primary);font-family:monospace">P01</b>
+                </div>
+                <div>
+                  <span style="color:var(--text-muted);display:block;font-size:10.5px">VEHICLE DETAILS</span>
+                  <b id="ticketVehicle">MH15AB1234 (Car)</b>
+                </div>
+                <div>
+                  <span style="color:var(--text-muted);display:block;font-size:10.5px">VISITOR NAME</span>
+                  <b id="ticketVisitor">—</b>
+                </div>
+                <div>
+                  <span style="color:var(--text-muted);display:block;font-size:10.5px">DATE & DURATION</span>
+                  <b id="ticketDateDuration">2026-10-12 • 2 Hours</b>
+                </div>
+                <div>
+                  <span style="color:var(--text-muted);display:block;font-size:10.5px">STATUS</span>
+                  <span class="status-tag confirmed">Confirmed / Active</span>
+                </div>
+                <div>
+                  <span style="color:var(--text-muted);display:block;font-size:10.5px">TOTAL FARE</span>
+                  <b style="color:var(--accent-dark);font-size:16px" id="ticketFare">₹60 (Paid)</b>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+              <button class="btn-secondary" onclick="window.print()">
+                🖨️ Print Parking Pass
+              </button>
+              <a href="my-bookings.html" class="btn-primary">
+                🎫 View All My Bookings
+              </a>
+              <a href="map.html" class="btn-accent">
+                🗺️ Navigate to Zone
+              </a>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script>
+    const user = requireRole("customer");
+    const bookingId = new URLSearchParams(location.search).get("id");
+
+    async function initConfirmation() {
+      if (!user) return;
+
+      renderAppShell({
+        title: "Booking Confirmation",
+        activeKey: "my-bookings",
+        subtitle: "Pass Details"
+      });
+
+      if (!bookingId) {
+        location.href = "my-bookings.html";
+        return;
+      }
+
+      try {
+        const b = await api(`/api/bookings/${bookingId}`);
+        document.getElementById("ticketZoneName").textContent = b.zone_name || "Parking Zone";
+        document.getElementById("ticketCode").textContent = b.booking_code || ("KP" + b.id);
+        document.getElementById("ticketSlot").textContent = b.slot_number;
+        document.getElementById("ticketVehicle").textContent = `${b.vehicle_number} (${b.vehicle_type})`;
+        document.getElementById("ticketVisitor").textContent = b.customer_name || b.visitor_name || user.name || "Customer";
+        document.getElementById("ticketDateDuration").textContent = `${b.booking_date} • ${b.duration}`;
+        document.getElementById("ticketFare").textContent = `₹${b.amount || 60} (Confirmed)`;
+      } catch (err) {
+        showToast("Error loading pass details", "error");
+      }
+    }
+
+    initConfirmation();
+  </script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Provider Registration | KumbhPark – Smart Parking System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="auth-page-wrapper" style="background:linear-gradient(135deg, #fffbeb 0%, #f8fafc 50%, #eff6ff 100%)">
+    <div class="auth-box" style="max-width:540px;border-top:4px solid var(--accent)">
+      <div class="auth-header">
+        <a href="index.html" class="auth-logo">
+          <div class="brand-icon" style="background:linear-gradient(135deg, #d97706, #f59e0b)">🛡️</div>
+          <div class="brand-info" style="text-align:left">
+            <h2 style="font-size:22px">Kumbh<span style="color:var(--accent)">Park</span></h2>
+            <p style="font-size:10px;color:var(--text-muted)">Parking Provider Operations</p>
+          </div>
+        </a>
+        <h2>Provider Registration</h2>
+        <p>List your parking ground, manage smart slot bays, and serve Kumbh Mela visitors.</p>
+      </div>
+
+      <div id="authAlert"></div>
+
+      <form id="providerRegForm">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Provider / Contact Name *</label>
+            <input type="text" id="regName" class="form-control" placeholder="Suresh Shinde" required>
+          </div>
+          <div class="form-group">
+            <label>Organization / Agency Name *</label>
+            <input type="text" id="regOrg" class="form-control" placeholder="Nashik Metro Parking Corp" required>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Business Email *</label>
+            <input type="email" id="regEmail" class="form-control" placeholder="provider@metro.com" required>
+          </div>
+          <div class="form-group">
+            <label>Mobile Number (10 digits) *</label>
+            <input type="tel" id="regMobile" class="form-control" placeholder="9876543210" maxlength="10" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Create Password *</label>
+          <input type="password" id="regPassword" class="form-control" placeholder="••••••••" required>
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn-accent" style="width:100%;justify-content:center;padding:13px;font-weight:700">
+          Register Provider Account →
+        </button>
+      </form>
+
+      <div style="margin-top:20px;text-align:center;font-size:12.5px;color:var(--text-muted)">
+        Already registered? <a href="provider-login.html" style="color:var(--accent-dark);font-weight:700">Provider Sign In</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script>
+    const existing = getUser();
+    if (existing && existing.role === "provider") {
+      location.replace("provider-dashboard.html");
+    }
+
+    document.getElementById("providerRegForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("regName").value.trim();
+      const org = document.getElementById("regOrg").value.trim();
+      const email = document.getElementById("regEmail").value.trim();
+      const mobile = document.getElementById("regMobile").value.trim();
+      const password = document.getElementById("regPassword").value.trim();
+      const alertBox = document.getElementById("authAlert");
+      const submitBtn = document.getElementById("submitBtn");
+      alertBox.innerHTML = "";
+
+      if (!/^\d{10}$/.test(mobile)) {
+        alertBox.innerHTML = '<div class="alert-message error">Mobile number must contain 10 digits.</div>';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Creating Account in Database...";
+
+      try {
+        // Clear any previous session before establishing the new provider account
+        clearUserState();
+
+        const res = await api("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            role: "provider",
+            name,
+            email,
+            mobile,
+            password,
+            organization_name: org
+          })
+        });
+
+        if (!res.user || !res.user.id) {
+          throw new Error("Registration succeeded but no user identity was returned. Please log in.");
+        }
+
+        // Use the database insertId from the server — never invent a client-side ID
+        saveUser(res.user);
+        showToast(`Welcome, ${res.user.name}! Provider account registered.`, "success");
+        setTimeout(() => location.href = "provider-dashboard.html", 400);
+      } catch (err) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Register Provider Account →";
+        alertBox.innerHTML = `<div class="alert-message error">${escapeHtml(err.message)}</div>`;
+      }
+    };
+  </script>
+</body>
+</html>

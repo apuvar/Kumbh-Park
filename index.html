@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KumbhPark – Smart Parking System for Kumbh Mela, Nashik</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .portal-landing-hero {
+      padding: 60px 6% 40px;
+      text-align: center;
+      background: linear-gradient(135deg, #ecfdf5 0%, #f8fafc 50%, #fef3c7 100%);
+      border-bottom: 1px solid var(--border-light);
+    }
+    .dual-auth-section {
+      max-width: 980px;
+      margin: -30px auto 60px;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+      position: relative;
+      z-index: 10;
+    }
+    .auth-choice-card {
+      background: #ffffff;
+      border: 2px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      padding: 36px 30px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .auth-choice-card:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-xl);
+    }
+    .auth-choice-card.customer-card {
+      border-color: #a7f3d0;
+    }
+    .auth-choice-card.customer-card:hover {
+      border-color: var(--primary);
+      box-shadow: 0 16px 32px rgba(13, 118, 88, 0.15);
+    }
+    .auth-choice-card.provider-card {
+      border-color: #fde68a;
+    }
+    .auth-choice-card.provider-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 16px 32px rgba(245, 158, 11, 0.15);
+    }
+    .choice-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      margin-bottom: 20px;
+    }
+    .auth-choice-card h3 {
+      font-size: 22px;
+      margin-bottom: 8px;
+    }
+    .auth-choice-card p {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 24px;
+      max-width: 340px;
+    }
+    .choice-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+    }
+    @media (max-width: 768px) {
+      .dual-auth-section {
+        grid-template-columns: 1fr;
+        margin-top: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Public Top Navigation -->
+  <header class="top-navbar" style="position:relative;background:#fff">
+    <a href="index.html" class="sidebar-brand">
+      <div class="brand-icon">🅿</div>
+      <div class="brand-info">
+        <h2>Kumbh<span style="color:var(--accent)">Park</span></h2>
+        <p>Smart Parking System</p>
+      </div>
+    </a>
+    <div style="display:flex;align-items:center;gap:12px">
+      <button onclick="handleFindParkingClick()" class="btn-primary" style="font-size:12.5px;padding:9px 18px">
+        🔍 Find Parking
+      </button>
+      <a href="help.html" class="btn-secondary" style="font-size:12.5px;padding:9px 16px">
+        ❓ Help
+      </a>
+    </div>
+  </header>
+
+  <!-- Hero Banner -->
+  <section class="portal-landing-hero">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:var(--primary-subtle);color:var(--primary);padding:6px 14px;border-radius:var(--radius-full);font-size:12px;font-weight:700;margin-bottom:16px">
+      🚦 Smart Mobility for Kumbh Mela Nashik
+    </div>
+    <h1 style="font-size:42px;letter-spacing:-1px;margin-bottom:12px">
+      Welcome to Kumbh<span style="color:var(--primary)">Park</span>
+    </h1>
+    <p style="font-size:15px;color:var(--text-muted);max-width:580px;margin:0 auto 20px;line-height:1.6">
+      Please select your account type below to access verified parking slot booking or facility management.
+    </p>
+  </section>
+
+  <!-- Two Clear Login & Registration Options -->
+  <section class="dual-auth-section">
+    <!-- Option A: Customer -->
+    <div class="auth-choice-card customer-card">
+      <div class="choice-icon" style="background:#ecfdf5;color:var(--primary);border:1px solid #a7f3d0">
+        🚗
+      </div>
+      <h3 style="color:var(--primary-dark)">Visitor / Customer</h3>
+      <p>
+        Find and reserve verified parking spaces across Ramkund, Panchavati, Tapovan and Gangapur Road with live digital passes.
+      </p>
+      <div class="choice-actions">
+        <a href="customer-login.html" class="btn-primary" style="justify-content:center;padding:13px;font-size:14px">
+          Customer Login →
+        </a>
+        <a href="customer-register.html" class="btn-secondary" style="justify-content:center;padding:12px;font-size:13px">
+          Register as Customer
+        </a>
+      </div>
+    </div>
+
+    <!-- Option B: Parking Provider -->
+    <div class="auth-choice-card provider-card">
+      <div class="choice-icon" style="background:#fffbeb;color:var(--accent-dark);border:1px solid #fde68a">
+        🛡️
+      </div>
+      <h3 style="color:var(--accent-dark)">Parking Provider</h3>
+      <p>
+        Manage your registered parking grounds, configure real-time slot bays, update availability, and review customer bookings.
+      </p>
+      <div class="choice-actions">
+        <a href="provider-login.html" class="btn-accent" style="justify-content:center;padding:13px;font-size:14px;font-weight:700">
+          Parking Provider Login →
+        </a>
+        <a href="provider-register.html" class="btn-secondary" style="justify-content:center;padding:12px;font-size:13px">
+          Register as Provider
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Public Overview / Status Bar -->
+  <div style="max-width:980px;margin:0 auto 60px;padding:0 20px">
+    <div class="dashboard-panel" style="padding:26px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px">
+      <div>
+        <h4 style="font-size:16px;color:var(--text-main)">Ready to explore Kumbh Mela parking?</h4>
+        <p style="font-size:12.5px;color:var(--text-muted);margin-top:2px">
+          Log in as a customer to browse real-time bays and reserve your spot before arriving at the ghats.
+        </p>
+      </div>
+      <button onclick="handleFindParkingClick()" class="btn-primary">
+        🔍 Find Parking Now →
+      </button>
+    </div>
+  </div>
+
+  <footer style="background:#0f172a;color:#ffffff;padding:40px 6% 25px;text-align:center;font-size:12px;color:#94a3b8">
+    © 2026 KumbhPark – Smart Parking System for Kumbh Mela Nashik. All Rights Reserved.
+  </footer>
+
+  <script src="js/common.js"></script>
+  <script>
+    // Automatic redirection for already authenticated sessions
+    const activeUser = getUser();
+    if (activeUser && activeUser.id && activeUser.role) {
+      if (activeUser.role === "provider") {
+        location.replace("provider-dashboard.html");
+      } else if (activeUser.role === "customer") {
+        location.replace("customer-dashboard.html");
+      }
+    }
+
+    // "Find Parking" requires customer login
+    function handleFindParkingClick() {
+      const user = getUser();
+      if (user && user.role === "customer") {
+        location.href = "parking.html";
+      } else if (user && user.role === "provider") {
+        showToast("You are logged in as a provider. Please use a customer account to book parking.", "info");
+        setTimeout(() => location.href = "provider-dashboard.html", 1000);
+      } else {
+        showToast("Please log in as a customer to search and book parking.", "info");
+        setTimeout(() => location.href = "login.html?redirect=parking.html", 400);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Find Parking | KumbhPark – Smart Parking System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container" id="appShell">
+    <main class="app-main" id="appMain">
+      <div class="page-body">
+
+        <!-- Header Search Bar -->
+        <div class="dashboard-panel" style="padding:26px">
+          <div style="margin-bottom:18px">
+            <h2 style="font-size:22px">Find Parking Zones in Nashik</h2>
+            <p style="font-size:12.5px;color:var(--text-muted);margin-top:2px">
+              Search verified parking locations near major Kumbh Mela ghats, temples and sadhugram.
+            </p>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1.8fr 1.2fr 1fr auto;gap:14px;align-items:end" id="searchBarForm">
+            <div class="form-group" style="margin-bottom:0">
+              <label>Search by Zone Name or Landmark</label>
+              <input type="text" id="searchInput" class="form-control" placeholder="e.g. Ramkund, Panchavati, Tapovan...">
+            </div>
+
+            <div class="form-group" style="margin-bottom:0">
+              <label>Vehicle Type</label>
+              <select id="vehicleTypeFilter" class="form-control">
+                <option value="all">All Vehicles</option>
+                <option value="Car">Car / SUV</option>
+                <option value="Two Wheeler">Two Wheeler / Bike</option>
+                <option value="Bus">Tourist Bus</option>
+                <option value="EV">Electric Vehicle (EV)</option>
+              </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom:0">
+              <label>Sort By</label>
+              <select id="sortFilter" class="form-control">
+                <option value="available">Highest Availability</option>
+                <option value="rate-low">Lowest Rate (₹/hr)</option>
+                <option value="distance">Nearest to Ghats</option>
+              </select>
+            </div>
+
+            <button id="searchBtn" class="btn-primary" style="height:46px;padding:0 24px">
+              🔍 Search
+            </button>
+          </div>
+          <div id="searchNotice" style="font-size:12px;color:var(--text-muted);margin-top:12px">
+            Showing all parking zones.
+          </div>
+        </div>
+
+        <!-- Zones Grid -->
+        <div id="parkingGrid" class="zone-grid">
+          <!-- Populated by JS -->
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script>
+    // Find Parking is a protected customer page
+    const user = requireRole("customer");
+    let allZones = [];
+
+    async function initParkingPage() {
+      if (!user) return;
+
+      renderAppShell({
+        title: "Find Parking",
+        activeKey: "find-parking",
+        subtitle: "Search & Browse Zones"
+      });
+
+      try {
+        allZones = await api("/api/parking");
+        renderZoneList(allZones);
+      } catch (err) {
+        console.error(err);
+      }
+
+      document.getElementById("searchBtn").onclick = handleFilter;
+      document.getElementById("searchInput").oninput = handleFilter;
+      document.getElementById("vehicleTypeFilter").onchange = handleFilter;
+      document.getElementById("sortFilter").onchange = handleFilter;
+    }
+
+    function handleFilter() {
+      const q = document.getElementById("searchInput").value.trim().toLowerCase();
+      const vType = document.getElementById("vehicleTypeFilter").value;
+      const sortBy = document.getElementById("sortFilter").value;
+
+      let filtered = allZones.filter(z => {
+        const text = `${z.name || z.zone_name} ${z.location}`.toLowerCase();
+        return text.includes(q);
+      });
+
+      if (sortBy === "available") {
+        filtered.sort((a, b) => (b.available_slots || b.available || 0) - (a.available_slots || a.available || 0));
+      } else if (sortBy === "rate-low") {
+        filtered.sort((a, b) => (a.rate || 0) - (b.rate || 0));
+      }
+
+      document.getElementById("searchNotice").textContent = `${filtered.length} parking zone(s) matched your criteria.`;
+      renderZoneList(filtered);
+    }
+
+    function renderZoneList(list) {
+      const grid = document.getElementById("parkingGrid");
+      if (!list.length) {
+        grid.innerHTML = `
+          <div style="grid-column:1/-1;text-align:center;padding:50px;background:#ffffff;border-radius:var(--radius-lg);border:1px solid var(--border-light)">
+            <h3>No parking zones found</h3>
+            <p style="color:var(--text-muted);font-size:13px;margin:8px 0 16px">Try a different search query or clear your filters.</p>
+            <button class="btn-secondary" onclick="document.getElementById('searchInput').value='';handleFilter();">Reset Filters</button>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = list.map((z, idx) => {
+        const avail = Number(z.available_slots || z.available || 0);
+        const cap = Number(z.capacity || 1);
+        const percent = Math.round((avail / cap) * 100);
+        const occPercent = 100 - percent;
+
+        return `
+          <article class="zone-card">
+            <div class="zone-banner ${z.image || ('zone-' + ((idx % 4) + 1))}">
+              <div class="zone-badge-row">
+                <span class="zone-dist-badge">📍 ${escapeHtml(z.distance || '0.8 km from Ghat')}</span>
+                <span class="zone-avail-badge">🟢 ${avail} Available</span>
+              </div>
+              <h3 style="color:#ffffff">${escapeHtml(z.name || z.zone_name)}</h3>
+            </div>
+            <div class="zone-card-body">
+              <div class="zone-location-text">
+                📍 ${escapeHtml(z.location)}
+              </div>
+
+              <!-- Progress bar -->
+              <div class="zone-progress-wrap">
+                <div class="zone-progress-labels">
+                  <span>Occupancy</span>
+                  <span><b>${occPercent}%</b> Filled</span>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill" style="width:${occPercent}%;background:${occPercent > 80 ? '#ef4444' : 'var(--primary)'}"></div>
+                </div>
+              </div>
+
+              <div class="zone-card-metrics">
+                <div>
+                  <span>Hourly Rate</span>
+                  <strong style="color:var(--accent-dark)">₹${z.rate}/hr</strong>
+                </div>
+                <div>
+                  <span>Available</span>
+                  <strong style="color:var(--primary)">${avail}</strong>
+                </div>
+                <div>
+                  <span>Total Cap</span>
+                  <strong>${cap}</strong>
+                </div>
+              </div>
+
+              <div class="zone-actions">
+                <a href="slots.html?zone=${z.id}" class="btn-primary" style="justify-content:center;font-size:12px;padding:9px">
+                  🅿️ View Slots
+                </a>
+                <a href="booking.html?zone=${z.id}" class="btn-accent" style="justify-content:center;font-size:12px;padding:9px">
+                  ⚡ Reserve Now
+                </a>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    initParkingPage();
+  </script>
+</body>
+</html>

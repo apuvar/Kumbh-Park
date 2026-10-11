@@ -1,0 +1,5 @@
+<?php session_start();if(!isset($_SESSION["admin"])){header("Location: login.php");exit;} ?>
+<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Admin Dashboard | KumbhPark</title><link rel="stylesheet" href="../style.css"></head><body>
+<div class="dashboard"><div class="dashboard-head"><div><span class="small-title">ADMIN</span><h1>Parking Dashboard</h1><p>Manage parking information.</p></div><a class="secondary-btn" href="logout.php">Logout</a></div>
+<div class="dashboard-grid"><div class="metric"><span>Total Zones</span><strong>4</strong></div><div class="metric"><span>Total Capacity</span><strong>1300</strong></div><div class="metric"><span>Available</span><strong>644</strong></div><div class="metric"><span>Bookings</span><strong>28</strong></div></div>
+<div class="dashboard-actions"><a class="primary-btn" href="zones.php">Manage Parking Zones</a><a class="secondary-btn" href="bookings.php">View Bookings</a><a class="secondary-btn" href="vehicles.php">View Vehicles</a></div></div></body></html>

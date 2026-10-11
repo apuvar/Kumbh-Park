@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Help & Support | KumbhPark – Smart Parking System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container" id="appShell">
+    <main class="app-main" id="appMain">
+      <div class="page-body">
+
+        <div style="max-width:840px;margin:0 auto">
+          <div class="dashboard-panel" style="padding:28px">
+            <div style="margin-bottom:24px;border-bottom:1px solid var(--border-light);padding-bottom:18px">
+              <span class="status-tag" style="background:var(--accent-subtle);color:var(--accent-dark);margin-bottom:6px">📞 PILGRIM ASSISTANCE</span>
+              <h2 style="font-size:24px">Kumbh Mela Parking Help & Guidelines</h2>
+              <p style="font-size:13px;color:var(--text-muted);margin-top:2px">
+                Official parking rules, traffic advisories, and contact information for Kumbh Mela Nashik.
+              </p>
+            </div>
+
+            <!-- Emergency Helplines -->
+            <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:16px;margin-bottom:28px">
+              <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--radius-md);padding:18px;text-align:center">
+                <span style="font-size:24px">📞</span>
+                <strong style="display:block;font-size:16px;color:var(--primary);margin-top:6px">1800-233-1234</strong>
+                <span style="font-size:11px;color:var(--text-muted)">Traffic Control Room (24x7)</span>
+              </div>
+              <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--radius-md);padding:18px;text-align:center">
+                <span style="font-size:24px">🚑</span>
+                <strong style="display:block;font-size:16px;color:#1d4ed8;margin-top:6px">108 / 112</strong>
+                <span style="font-size:11px;color:var(--text-muted)">Emergency Medical & Police</span>
+              </div>
+              <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:var(--radius-md);padding:18px;text-align:center">
+                <span style="font-size:24px">🚌</span>
+                <strong style="display:block;font-size:16px;color:var(--accent-dark);margin-top:6px">1800-22-1250</strong>
+                <span style="font-size:11px;color:var(--text-muted)">Free Ghat Shuttle Helpline</span>
+              </div>
+            </div>
+
+            <!-- FAQ Accordions -->
+            <h3 style="font-size:18px;margin-bottom:14px">Frequently Asked Questions</h3>
+
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div style="background:var(--bg-page);border:1px solid var(--border-light);border-radius:var(--radius-md);padding:16px">
+                <strong style="font-size:14px;color:var(--primary)">1. How does the digital parking pass work?</strong>
+                <p style="font-size:12.5px;color:var(--text-muted);margin-top:6px">
+                  After booking a slot on KumbhPark, you receive an E-Pass with a QR code and Slot ID (e.g. P01). When you reach the parking entrance gate, scan your pass at the sensor boom barrier or show it to the attendant for express entry.
+                </p>
+              </div>
+
+              <div style="background:var(--bg-page);border:1px solid var(--border-light);border-radius:var(--radius-md);padding:16px">
+                <strong style="font-size:14px;color:var(--primary)">2. Can I cancel my reservation if my travel plans change?</strong>
+                <p style="font-size:12.5px;color:var(--text-muted);margin-top:6px">
+                  Yes! Navigate to "My Bookings" in your dashboard and click "Cancel". The slot will be instantly released for other incoming pilgrims.
+                </p>
+              </div>
+
+              <div style="background:var(--bg-page);border:1px solid var(--border-light);border-radius:var(--radius-md);padding:16px">
+                <strong style="font-size:14px;color:var(--primary)">3. Are EV charging stations available at Ramkund?</strong>
+                <p style="font-size:12.5px;color:var(--text-muted);margin-top:6px">
+                  Yes, Zone A (Ramkund) and Zone D (Gangapur Road) feature dedicated EV fast-charging bays marked with ⚡ in the visual slot grid.
+                </p>
+              </div>
+
+              <div style="background:var(--bg-page);border:1px solid var(--border-light);border-radius:var(--radius-md);padding:16px">
+                <strong style="font-size:14px;color:var(--primary)">4. How do I register as a Parking Provider?</strong>
+                <p style="font-size:12.5px;color:var(--text-muted);margin-top:6px">
+                  Click on "Provider Portal" from the login page, register your organization details, and start adding your parking zones and managing slots immediately.
+                </p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script>
+    renderAppShell({
+      title: "Help & Support",
+      activeKey: "help",
+      subtitle: "Guidance & FAQs"
+    });
+  </script>
+</body>
+</html>

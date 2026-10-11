@@ -1,0 +1,14 @@
+{
+  "name": "kumbhpark-server",
+  "version": "1.0.0",
+  "description": "Simple Node.js and Express backend for KumbhPark",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "express": "^4.21.2",
+    "mysql2": "^3.11.5"
+  }
+}

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book Parking | KumbhPark – Smart Parking System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container" id="appShell">
+    <main class="app-main" id="appMain">
+      <div class="page-body">
+
+        <div style="max-width:840px;margin:0 auto">
+          <!-- Booking Header Card -->
+          <div class="dashboard-panel" style="padding:28px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;margin-bottom:20px;border-bottom:1px solid var(--border-light);padding-bottom:18px">
+              <div>
+                <span class="status-tag confirmed" style="margin-bottom:6px">🅿️ PARKING PASS RESERVATION</span>
+                <h2 style="font-size:24px">Reserve Your Parking Slot</h2>
+                <p style="font-size:13px;color:var(--text-muted);margin-top:2px">
+                  Complete pilgrim details to receive an instant verified digital parking pass.
+                </p>
+              </div>
+
+              <!-- Selected Bay Badge -->
+              <div style="display:flex;align-items:center;gap:12px;background:var(--primary-subtle);border:1px solid var(--primary-light);padding:10px 16px;border-radius:var(--radius-md)">
+                <div style="font-size:24px">🅿️</div>
+                <div>
+                  <span style="font-size:10px;font-weight:700;color:var(--primary);text-transform:uppercase;display:block">Selected Bay</span>
+                  <strong id="displaySlot" style="font-size:18px;color:var(--primary-dark);font-family:monospace">P01</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- Booking Alert -->
+            <div id="bookingAlert"></div>
+
+            <!-- Booking Form -->
+            <form id="bookingForm">
+              <div class="form-grid-2">
+                <div class="form-group">
+                  <label>Visitor / Pilgrim Name *</label>
+                  <input type="text" id="visitorName" class="form-control" placeholder="Your full name" required>
+                </div>
+                <div class="form-group">
+                  <label>Mobile Number (10 digits) *</label>
+                  <input type="tel" id="mobile" class="form-control" placeholder="9876501234" maxlength="10" required>
+                </div>
+              </div>
+
+              <div class="form-grid-2">
+                <div class="form-group">
+                  <label>Vehicle Number *</label>
+                  <input type="text" id="vehicleNumber" class="form-control" placeholder="MH15AB1234" required style="text-transform:uppercase">
+                </div>
+                <div class="form-group">
+                  <label>Vehicle Type *</label>
+                  <select id="vehicleType" class="form-control" required>
+                    <option value="Car">Car / SUV</option>
+                    <option value="Two Wheeler">Two Wheeler / Motorcycle</option>
+                    <option value="Bus">Tourist Bus / Mini Bus</option>
+                    <option value="EV">Electric Vehicle (EV)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-grid-2">
+                <div class="form-group">
+                  <label>Booking Date *</label>
+                  <input type="date" id="bookingDate" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label>Duration *</label>
+                  <select id="duration" class="form-control" required>
+                    <option value="1 Hour" data-hours="1">1 Hour</option>
+                    <option value="2 Hours" data-hours="2" selected>2 Hours</option>
+                    <option value="3 Hours" data-hours="3">3 Hours</option>
+                    <option value="4 Hours" data-hours="4">4 Hours</option>
+                    <option value="8 Hours" data-hours="8">8 Hours (Full Dip / Rituals)</option>
+                    <option value="12 Hours" data-hours="12">12 Hours (Full Day)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Price Breakdown Box -->
+              <div style="background:var(--bg-page);border:1px solid var(--border-light);border-radius:var(--radius-md);padding:18px;margin:20px 0">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:12.5px;color:var(--text-muted)">
+                  <span id="priceZoneText">Zone Rate (Zone A – Ramkund)</span>
+                  <span id="priceRateText">₹30 × 2 Hours</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--text-muted);margin-bottom:12px">
+                  <span>FastTag / UPI Convenience Fee</span>
+                  <span style="color:var(--primary);font-weight:600">FREE</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px dashed var(--border-light);font-size:16px">
+                  <strong>Total Amount Payable</strong>
+                  <strong id="priceTotalText" style="color:var(--accent-dark);font-size:22px">₹60</strong>
+                </div>
+              </div>
+
+              <div style="display:flex;gap:12px;justify-content:flex-end">
+                <a href="slots.html" class="btn-secondary" style="padding:12px 20px">
+                  ← Change Slot
+                </a>
+                <button type="submit" class="btn-primary" id="confirmBtn" style="padding:12px 28px;font-size:14px">
+                  Confirm Booking & Generate Pass →
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script>
+    const user = requireRole("customer");
+    const params = new URLSearchParams(location.search);
+    let zoneId = Number(params.get("zone") || 0);
+    let slotNum = params.get("slot") || "";
+    let zoneObj = null;
+
+    async function initBookingPage() {
+      if (!user) return;
+
+      renderAppShell({
+        title: "Book Parking",
+        activeKey: "find-parking",
+        subtitle: "Reservation Form"
+      });
+
+      // Set min date to today
+      document.getElementById("bookingDate").value = new Date().toISOString().split("T")[0];
+      document.getElementById("bookingDate").min = new Date().toISOString().split("T")[0];
+
+      // Prefill authenticated customer details
+      document.getElementById("visitorName").value = user.name || "";
+      document.getElementById("mobile").value = user.mobile || "";
+      if (user.vehicle_number) document.getElementById("vehicleNumber").value = user.vehicle_number;
+      if (user.vehicle_type) document.getElementById("vehicleType").value = user.vehicle_type;
+
+      try {
+        const zones = await api("/api/parking");
+        zoneObj = zones.find(z => z.id === zoneId) || zones[0];
+        zoneId = zoneObj.id;
+        document.getElementById("displaySlot").textContent = slotNum;
+        calculateTotal();
+      } catch (e) {
+        console.error(e);
+      }
+
+      document.getElementById("duration").onchange = calculateTotal;
+    }
+
+    function calculateTotal() {
+      if (!zoneObj) return;
+      const rate = Number(zoneObj.rate || 30);
+      const selOpt = document.getElementById("duration").selectedOptions[0];
+      const hours = parseInt(selOpt.dataset.hours || "2");
+      const total = rate * hours;
+
+      document.getElementById("priceZoneText").textContent = `${zoneObj.name || zoneObj.zone_name} • Slot ${slotNum}`;
+      document.getElementById("priceRateText").textContent = `₹${rate} × ${hours} Hour(s)`;
+      document.getElementById("priceTotalText").textContent = `₹${total}`;
+    }
+
+    document.getElementById("bookingForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const visitorName = document.getElementById("visitorName").value.trim();
+      const mobile = document.getElementById("mobile").value.trim();
+      const vehicleNumber = document.getElementById("vehicleNumber").value.trim().toUpperCase();
+      const vehicleType = document.getElementById("vehicleType").value;
+      const bookingDate = document.getElementById("bookingDate").value;
+      const duration = document.getElementById("duration").value;
+      const alertBox = document.getElementById("bookingAlert");
+      alertBox.innerHTML = "";
+
+      if (!/^\d{10}$/.test(mobile)) {
+        alertBox.innerHTML = '<div class="alert-message error">Please enter a valid 10-digit mobile number.</div>';
+        return;
+      }
+
+      const confirmBtn = document.getElementById("confirmBtn");
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = "Reserving Slot...";
+
+      try {
+        const res = await api("/api/bookings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            customer_id: user.id,
+            zone_id: zoneId,
+            slot_number: slotNum,
+            visitor_name: visitorName,
+            mobile,
+            vehicle_number: vehicleNumber,
+            vehicle_type: vehicleType,
+            booking_date: bookingDate,
+            duration
+          })
+        });
+
+        showToast("Parking reserved successfully!", "success");
+        setTimeout(() => {
+          location.href = `confirmation.html?id=${res.bookingId}`;
+        }, 400);
+
+      } catch (err) {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = "Confirm Booking & Generate Pass →";
+        alertBox.innerHTML = `<div class="alert-message error">${escapeHtml(err.message || "Booking failed. Please try another slot.")}</div>`;
+      }
+    };
+
+    initBookingPage();
+  </script>
+</body>
+</html>

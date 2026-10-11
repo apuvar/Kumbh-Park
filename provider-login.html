@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Provider Login | KumbhPark – Smart Parking System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="auth-page-wrapper" style="background:linear-gradient(135deg, #fffbeb 0%, #f8fafc 50%, #eff6ff 100%)">
+    <div class="auth-box" style="border-top:4px solid var(--accent)">
+      <div class="auth-header">
+        <a href="index.html" class="auth-logo">
+          <div class="brand-icon" style="background:linear-gradient(135deg, #d97706, #f59e0b)">🛡️</div>
+          <div class="brand-info" style="text-align:left">
+            <h2 style="font-size:22px">Kumbh<span style="color:var(--accent)">Park</span></h2>
+            <p style="font-size:10px;color:var(--text-muted)">Parking Provider Operations</p>
+          </div>
+        </a>
+        <h2>Provider Sign In</h2>
+        <p>Manage your Kumbh Mela parking lots, configure slots, and track bookings.</p>
+      </div>
+
+      <div id="authAlert"></div>
+
+      <form id="providerLoginForm">
+        <div class="form-group">
+          <label>Provider Email Address</label>
+          <input type="email" id="loginEmail" class="form-control" placeholder="provider@kumbhpark.com" required>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required>
+        </div>
+        <button type="submit" id="submitBtn" class="btn-accent" style="width:100%;justify-content:center;padding:13px;font-weight:700">
+          Sign In to Provider Portal →
+        </button>
+      </form>
+
+      <div class="demo-account-box" style="background:#fffbeb;border-color:#fde68a">
+        <strong>Demo Provider Credentials (seed data only):</strong><br>
+        Email: <code>provider@kumbhpark.com</code> | Password: <code>provider123</code>
+      </div>
+
+      <div style="margin-top:22px;text-align:center;font-size:12.5px;color:var(--text-muted);display:flex;flex-direction:column;gap:8px">
+        <div>Register new parking facility? <a href="provider-register.html" style="color:var(--accent-dark);font-weight:700">Register as Provider</a></div>
+        <div style="border-top:1px solid var(--border-light);padding-top:10px">
+          Looking to book visitor parking? <a href="customer-login.html" style="color:var(--primary);font-weight:700">Visitor Login →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script>
+    const existing = getUser();
+    if (existing && existing.role === "provider") {
+      const returnUrl = safeRedirectTarget(
+        new URLSearchParams(location.search).get("redirect"),
+        "provider-dashboard.html"
+      );
+      location.replace(returnUrl);
+    }
+
+    document.getElementById("providerLoginForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value.trim();
+      const alertBox = document.getElementById("authAlert");
+      const submitBtn = document.getElementById("submitBtn");
+      alertBox.innerHTML = "";
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Authenticating...";
+
+      try {
+        clearUserState();
+
+        const res = await api("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, role: "provider" })
+        });
+
+        if (!res || !res.user || !res.user.id) {
+          throw new Error("Invalid response from server.");
+        }
+
+        saveUser(res.user);
+        showToast("Welcome to Provider Portal, " + res.user.name, "success");
+        const returnUrl = safeRedirectTarget(
+          new URLSearchParams(location.search).get("redirect"),
+          "provider-dashboard.html"
+        );
+        setTimeout(() => location.href = returnUrl, 400);
+      } catch (err) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Sign In to Provider Portal →";
+        alertBox.innerHTML = `<div class="alert-message error">${escapeHtml(err.message || "Invalid email or password.")}</div>`;
+      }
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Provider Dashboard | KumbhPark – Smart Parking System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container" id="appShell">
+    <main class="app-main" id="appMain">
+      <div class="page-body">
+
+        <!-- Welcome Banner & Actions -->
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:24px">
+          <div>
+            <h2 style="font-size:24px;letter-spacing:-0.5px">
+              Welcome, <span id="providerGreetingName">Provider</span> 🛡️
+            </h2>
+            <p style="color:var(--text-muted);font-size:13px;margin-top:2px">
+              Manage your parking grounds, monitor sensor bays, and view bookings.
+            </p>
+          </div>
+          <div class="quick-actions-bar" style="margin-bottom:0">
+            <a href="add-zone.html" class="btn-primary">➕ Add Parking Zone</a>
+            <a href="manage-slots.html" class="btn-secondary">🎛️ Manage Slots</a>
+            <a href="provider-bookings.html" class="btn-accent">📋 View Bookings</a>
+          </div>
+        </div>
+
+        <!-- Metric Cards -->
+        <div class="metrics-row">
+          <div class="metric-card">
+            <div class="metric-info">
+              <span>Managed Capacity</span>
+              <strong id="providerTotalSlots">0</strong>
+              <div class="metric-trend">Across owned zones</div>
+            </div>
+            <div class="metric-icon-box blue">🅿️</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-info">
+              <span>Available Bays</span>
+              <strong id="providerAvailableSlots" style="color:var(--primary)">0</strong>
+              <div class="metric-trend" style="color:var(--primary)">🟢 Ready for entry</div>
+            </div>
+            <div class="metric-icon-box green">⚡</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-info">
+              <span>Occupied Bays</span>
+              <strong id="providerOccupiedSlots" style="color:#ef4444">0</strong>
+              <div class="metric-trend" style="color:#ef4444">🔴 In Use / Booked</div>
+            </div>
+            <div class="metric-icon-box red">🚗</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-info">
+              <span>Active Bookings</span>
+              <strong id="providerBookingCount">0</strong>
+              <div class="metric-trend" style="color:var(--accent-dark)">Incoming pilgrims</div>
+            </div>
+            <div class="metric-icon-box amber">📋</div>
+          </div>
+        </div>
+
+        <!-- Managed Zones Grid -->
+        <div class="dashboard-panel">
+          <div class="panel-header">
+            <div>
+              <h3>My Parking Facilities</h3>
+              <p>Grounds owned and operated by your provider account.</p>
+            </div>
+            <a href="add-zone.html" class="btn-primary" style="font-size:12px;padding:7px 14px">+ New Zone</a>
+          </div>
+          <div id="providerZonesGrid" class="zone-grid">
+            <div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--text-muted)">Loading your parking facilities...</div>
+          </div>
+        </div>
+
+        <!-- Provider Bookings Section -->
+        <div class="dashboard-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Recent Bookings in Your Zones</h3>
+              <p>Real-time vehicle check-ins and pilgrim reservations.</p>
+            </div>
+            <a href="provider-bookings.html" class="btn-secondary" style="font-size:12px;padding:7px 14px">All Bookings →</a>
+          </div>
+          <div class="table-responsive">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>Booking ID</th>
+                  <th>Customer Name</th>
+                  <th>Vehicle Number</th>
+                  <th>Zone Name</th>
+                  <th>Slot ID</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="providerBookingsTable">
+                <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted)">Loading bookings...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script>
+    const user = requireRole("provider");
+    if (!user) { /* redirected by requireRole */ }
+
+    async function loadProviderDashboard() {
+      if (!user) return;
+
+      renderAppShell({
+        title: "Provider Dashboard",
+        activeKey: "provider-dashboard",
+        subtitle: user.name || "Management Overview"
+      });
+
+      const greeting = document.getElementById("providerGreetingName");
+      if (greeting) greeting.textContent = user.name || "Provider";
+
+      try {
+        const zones = await api(`/api/providers/${user.id}/zones`);
+        let total = 0, avail = 0;
+        zones.forEach(z => {
+          total += Number(z.capacity || 0);
+          avail += Number(z.available_slots || z.available || 0);
+        });
+        document.getElementById("providerTotalSlots").textContent = total.toLocaleString();
+        document.getElementById("providerAvailableSlots").textContent = avail.toLocaleString();
+        document.getElementById("providerOccupiedSlots").textContent = Math.max(0, total - avail).toLocaleString();
+
+        const grid = document.getElementById("providerZonesGrid");
+        if (!zones.length) {
+          grid.innerHTML = `
+            <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted)">
+              No parking zones registered yet.<br>
+              <a href="add-zone.html" class="btn-primary" style="display:inline-flex;margin-top:14px;font-size:13px">+ Add Parking Zone</a>
+            </div>`;
+        } else {
+          grid.innerHTML = zones.map(z => {
+            const zAvail = Number(z.available_slots || z.available || 0);
+            const zCap = Number(z.capacity || 1);
+            const percent = Math.round((zAvail / zCap) * 100);
+            return `
+              <div class="zone-card">
+                <div class="zone-banner ${z.image || 'zone-1'}">
+                  <div class="zone-badge-row">
+                    <span class="zone-dist-badge">Rate: ₹${z.rate}/hr</span>
+                    <span class="zone-avail-badge">${percent}% Available</span>
+                  </div>
+                  <h3 style="color:#fff">${escapeHtml(z.name || z.zone_name)}</h3>
+                </div>
+                <div class="zone-card-body">
+                  <div class="zone-location-text">📍 ${escapeHtml(z.location)}</div>
+                  <div class="zone-card-metrics">
+                    <div><span>Available</span><strong style="color:var(--primary)">${zAvail}</strong></div>
+                    <div><span>Occupied</span><strong>${zCap - zAvail}</strong></div>
+                    <div><span>Capacity</span><strong>${zCap}</strong></div>
+                  </div>
+                  <div class="zone-actions">
+                    <a href="manage-slots.html?zone=${z.id}" class="btn-primary" style="font-size:12px;padding:8px">🎛️ Slots</a>
+                    <a href="edit-zone.html?id=${z.id}" class="btn-secondary" style="font-size:12px;padding:8px">✏️ Edit</a>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join("");
+        }
+
+        // Load Bookings for this provider only
+        const bookings = await api(`/api/providers/${user.id}/bookings`);
+        document.getElementById("providerBookingCount").textContent = bookings.length;
+        const tbody = document.getElementById("providerBookingsTable");
+        if (!bookings.length) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted)">No bookings recorded for your parking zones yet.</td></tr>';
+        } else {
+          tbody.innerHTML = bookings.slice(0, 5).map(b => `
+            <tr>
+              <td><b style="color:var(--primary);font-family:monospace">${escapeHtml(b.booking_code || ("KP" + b.id))}</b></td>
+              <td><b>${escapeHtml(b.customer_name || "Pilgrim")}</b></td>
+              <td>${escapeHtml(b.vehicle_number)} (${escapeHtml(b.vehicle_type)})</td>
+              <td>${escapeHtml(b.zone_name)}</td>
+              <td><span style="font-family:monospace;font-weight:700;padding:2px 8px;border-radius:4px;background:#f1f5f9">${escapeHtml(b.slot_number)}</span></td>
+              <td>${escapeHtml(b.booking_date)}</td>
+              <td><span class="status-tag ${(b.status||'').toLowerCase()}">${escapeHtml(b.status)}</span></td>
+            </tr>
+          `).join("");
+        }
+
+      } catch (err) {
+        console.error(err);
+        showToast(err.message || "Failed to load provider dashboard", "error");
+      }
+    }
+
+    loadProviderDashboard();
+  </script>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Bookings | KumbhPark – Smart Parking System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container" id="appShell">
+    <main class="app-main" id="appMain">
+      <div class="page-body">
+
+        <!-- Top Header & Actions -->
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:24px">
+          <div>
+            <h2 style="font-size:24px">My Parking Passes & Bookings</h2>
+            <p style="font-size:13px;color:var(--text-muted);margin-top:2px">
+              View your active Kumbh Mela reservations, print digital passes or manage cancellations.
+            </p>
+          </div>
+          <a href="parking.html" class="btn-primary">
+            ➕ Book New Parking Slot
+          </a>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="dashboard-panel" style="padding:16px 20px;margin-bottom:20px">
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <span style="font-size:12px;font-weight:700;color:var(--text-muted);margin-right:6px">FILTER STATUS:</span>
+            <button class="role-switch-btn active" id="tabAll" onclick="filterBookings('all')">All Passes</button>
+            <button class="role-switch-btn" id="tabActive" onclick="filterBookings('confirmed')">Active / Confirmed</button>
+            <button class="role-switch-btn" id="tabCancelled" onclick="filterBookings('cancelled')">Cancelled</button>
+          </div>
+        </div>
+
+        <!-- Bookings Table Panel -->
+        <div class="dashboard-panel">
+          <div class="table-responsive">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>Pass Code</th>
+                  <th>Parking Zone</th>
+                  <th>Slot ID</th>
+                  <th>Vehicle Number</th>
+                  <th>Date & Time</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="bookingsTableBody">
+                <tr><td colspan="8" style="text-align:center;padding:36px;color:var(--text-muted)">Loading your bookings...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script>
+    const user = requireRole("customer");
+    let allBookings = [];
+    let currentFilter = "all";
+
+    async function initMyBookingsPage() {
+      if (!user) return;
+
+      renderAppShell({
+        title: "My Bookings",
+        activeKey: "my-bookings",
+        subtitle: "Parking Passes"
+      });
+
+      await loadBookings();
+    }
+
+    async function loadBookings() {
+      if (!user) return;
+      try {
+        allBookings = await api(`/api/customer/${user.id}/bookings`);
+        renderBookingsList();
+      } catch (err) {
+        document.getElementById("bookingsTableBody").innerHTML = `
+          <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted)">Unable to load your bookings.</td></tr>
+        `;
+      }
+    }
+
+    function filterBookings(status) {
+      currentFilter = status;
+      document.querySelectorAll(".role-switch-btn").forEach(btn => btn.classList.remove("active"));
+      if (status === "all") document.getElementById("tabAll").classList.add("active");
+      if (status === "confirmed") document.getElementById("tabActive").classList.add("active");
+      if (status === "cancelled") document.getElementById("tabCancelled").classList.add("active");
+      renderBookingsList();
+    }
+
+    function renderBookingsList() {
+      const tbody = document.getElementById("bookingsTableBody");
+      let filtered = allBookings;
+
+      if (currentFilter === "confirmed") {
+        filtered = allBookings.filter(b => (b.status || "").toLowerCase() === "confirmed");
+      } else if (currentFilter === "cancelled") {
+        filtered = allBookings.filter(b => (b.status || "").toLowerCase() === "cancelled");
+      }
+
+      if (!filtered.length) {
+        const emptyMsg = currentFilter === "all"
+          ? "You haven't booked any parking slots yet."
+          : `No ${currentFilter} bookings found.`;
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" style="text-align:center;padding:45px;color:var(--text-muted)">
+              ${emptyMsg}<br>
+              <a href="parking.html" class="btn-primary" style="margin-top:14px;display:inline-flex">🔍 Find a Parking Slot →</a>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(b => {
+        const normStatus = (b.status || "Confirmed").toLowerCase();
+        const canCancel = normStatus === "confirmed";
+
+        return `
+          <tr>
+            <td>
+              <b style="color:var(--primary);font-family:monospace">${escapeHtml(b.booking_code || ("KP" + b.id))}</b>
+            </td>
+            <td><b>${escapeHtml(b.zone_name)}</b></td>
+            <td>
+              <span style="font-family:monospace;font-weight:800;padding:3px 9px;border-radius:4px;background:#f1f5f9;color:var(--primary)">
+                ${escapeHtml(b.slot_number)}
+              </span>
+            </td>
+            <td>${escapeHtml(b.vehicle_number)} (${escapeHtml(b.vehicle_type)})</td>
+            <td>${escapeHtml(b.booking_date)} • ${escapeHtml(b.duration)}</td>
+            <td><b>₹${b.amount || 60}</b></td>
+            <td>
+              <span class="status-tag ${normStatus}">
+                ${escapeHtml(b.status)}
+              </span>
+            </td>
+            <td>
+              <div style="display:flex;gap:8px">
+                <button class="btn-secondary" style="font-size:11px;padding:6px 11px" onclick="viewTicketPass(${b.id})">
+                  🎫 View E-Pass
+                </button>
+                ${canCancel ? `
+                  <button class="btn-danger" onclick="cancelReservation(${b.id}, '${escapeHtml(b.slot_number)}')">
+                    Cancel
+                  </button>
+                ` : ''}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    async function viewTicketPass(id) {
+      const b = allBookings.find(x => x.id === id);
+      if (b) {
+        openTicketModal(b);
+      }
+    }
+
+    async function cancelReservation(id, slotNum) {
+      if (!confirm(`Are you sure you want to cancel booking for Slot ${slotNum}? This will free the slot for other pilgrims.`)) {
+        return;
+      }
+
+      try {
+        await api(`/api/bookings/${id}/cancel`, { method: "PUT" });
+        showToast(`Booking cancelled. Slot ${slotNum} released.`, "success");
+        await loadBookings();
+      } catch (err) {
+        showToast(err.message || "Cancellation failed", "error");
+      }
+    }
+
+    initMyBookingsPage();
+  </script>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Registration | KumbhPark – Smart Parking System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="auth-page-wrapper">
+    <div class="auth-box" style="max-width:540px">
+      <div class="auth-header">
+        <a href="index.html" class="auth-logo">
+          <div class="brand-icon">🅿</div>
+          <div class="brand-info" style="text-align:left">
+            <h2 style="font-size:22px">Kumbh<span style="color:var(--accent)">Park</span></h2>
+            <p style="font-size:10px;color:var(--text-muted)">Smart Parking System</p>
+          </div>
+        </a>
+        <h2>Visitor / Customer Registration</h2>
+        <p>Create your personal account for verified parking at Kumbh Mela Nashik.</p>
+      </div>
+
+      <div id="authAlert"></div>
+
+      <form id="customerRegForm">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" id="regName" class="form-control" placeholder="e.g. Ramesh Kulkarni" required>
+          </div>
+          <div class="form-group">
+            <label>Mobile Number (10 digits) *</label>
+            <input type="tel" id="regMobile" class="form-control" placeholder="9876543210" maxlength="10" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Email Address *</label>
+          <input type="email" id="regEmail" class="form-control" placeholder="ramesh@example.com" required>
+        </div>
+
+        <div class="form-group">
+          <label>Create Password *</label>
+          <input type="password" id="regPassword" class="form-control" placeholder="••••••••" required>
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn-primary" style="width:100%;justify-content:center;padding:13px">
+          Register & Continue to Dashboard →
+        </button>
+      </form>
+
+      <div style="margin-top:20px;text-align:center;font-size:12.5px;color:var(--text-muted)">
+        Already have an account? <a href="customer-login.html" style="color:var(--primary);font-weight:700">Sign In</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script>
+    // If already logged in as customer, redirect to dashboard
+    const existing = getUser();
+    if (existing && existing.role === "customer") {
+      location.replace("customer-dashboard.html");
+    }
+
+    document.getElementById("customerRegForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("regName").value.trim();
+      const mobile = document.getElementById("regMobile").value.trim();
+      const email = document.getElementById("regEmail").value.trim();
+      const password = document.getElementById("regPassword").value.trim();
+      const alertBox = document.getElementById("authAlert");
+      const submitBtn = document.getElementById("submitBtn");
+      alertBox.innerHTML = "";
+
+      if (!/^\d{10}$/.test(mobile)) {
+        alertBox.innerHTML = '<div class="alert-message error">Mobile number must contain exactly 10 digits.</div>';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Creating Account in Database...";
+
+      try {
+        clearUserState();
+
+        const res = await api("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            role: "customer",
+            name,
+            email,
+            mobile,
+            password
+          })
+        });
+
+        if (res.user && res.user.id) {
+          saveUser(res.user);
+          showToast(`Welcome, ${res.user.name}! Account registered successfully.`, "success");
+          setTimeout(() => location.href = "customer-dashboard.html", 400);
+        } else {
+          showToast("Registration successful. Please log in.", "success");
+          setTimeout(() => location.href = "customer-login.html", 400);
+        }
+      } catch (err) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Register & Continue to Dashboard →";
+        alertBox.innerHTML = `<div class="alert-message error">${escapeHtml(err.message)}</div>`;
+      }
+    };
+  </script>
+</body>
+</html>

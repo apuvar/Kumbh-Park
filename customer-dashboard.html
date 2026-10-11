@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Dashboard | KumbhPark – Smart Parking System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container" id="appShell">
+    <main class="app-main" id="appMain">
+      <div class="page-body">
+
+        <!-- Welcome Banner & Quick Actions -->
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:24px">
+          <div>
+            <h2 style="font-size:24px;letter-spacing:-0.5px">
+              Namaste, <span id="customerGreetingName" style="color:var(--primary)">Customer</span> 🙏
+            </h2>
+            <p style="color:var(--text-muted);font-size:13px;margin-top:2px">
+              Live smart parking overview for Nashik Kumbh Mela pilgrimage zones.
+            </p>
+          </div>
+          <div class="quick-actions-bar" style="margin-bottom:0">
+            <a href="parking.html" class="btn-primary">🔍 Find Parking</a>
+            <a href="map.html" class="btn-secondary">🗺️ Open Map</a>
+            <a href="my-bookings.html" class="btn-accent">🎫 My Passes</a>
+          </div>
+        </div>
+
+        <!-- 4 Summary Metric Cards -->
+        <div class="metrics-row">
+          <div class="metric-card">
+            <div class="metric-info">
+              <span>My Active Passes</span>
+              <strong id="statMyBookings" style="color:var(--primary)">0</strong>
+              <div class="metric-trend">Confirmed reservations</div>
+            </div>
+            <div class="metric-icon-box green">🎫</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-info">
+              <span>Available Bays</span>
+              <strong id="statAvailableSlots" style="color:var(--primary)">0</strong>
+              <div class="metric-trend" style="color:var(--primary)">Across all zones</div>
+            </div>
+            <div class="metric-icon-box blue">⚡</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-info">
+              <span>Occupied Bays</span>
+              <strong id="statBookedSlots" style="color:#ef4444">0</strong>
+              <div class="metric-trend" style="color:#ef4444">Current festival rush</div>
+            </div>
+            <div class="metric-icon-box red">🚗</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-info">
+              <span>Active Zones</span>
+              <strong id="statActiveZones">0</strong>
+              <div class="metric-trend" style="color:var(--accent-dark)">Nashik City Area</div>
+            </div>
+            <div class="metric-icon-box amber">📍</div>
+          </div>
+        </div>
+
+        <!-- Zone Live Availability Overview -->
+        <div class="dashboard-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Kumbh Mela Parking Zone Availability</h3>
+              <p>Live occupancy rates around Ramkund, Panchavati, Tapovan and Gangapur Road.</p>
+            </div>
+            <a href="parking.html" class="btn-secondary" style="font-size:12px;padding:7px 14px">Browse All Zones →</a>
+          </div>
+          <div id="zoneOverviewGrid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:16px">
+            <div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--text-muted)">Loading live parking zones...</div>
+          </div>
+        </div>
+
+        <!-- Recent Bookings Panel -->
+        <div class="dashboard-panel">
+          <div class="panel-header">
+            <div>
+              <h3>My Recent Bookings</h3>
+              <p>Your reserved parking passes and active visits.</p>
+            </div>
+            <a href="my-bookings.html" class="btn-secondary" style="font-size:12px;padding:7px 14px">Full History →</a>
+          </div>
+          <div class="table-responsive">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>Booking ID</th>
+                  <th>Parking Zone</th>
+                  <th>Slot ID</th>
+                  <th>Vehicle Number</th>
+                  <th>Date & Time</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="recentBookingsBody">
+                <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted)">Loading your bookings...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script>
+    // Enforce customer authentication
+    const user = requireRole("customer");
+
+    async function loadDashboard() {
+      if (!user) return;
+
+      renderAppShell({
+        title: "Customer Dashboard",
+        activeKey: "dashboard",
+        subtitle: "Overview"
+      });
+
+      // Display authenticated customer's name
+      document.getElementById("customerGreetingName").textContent = user.name || "Customer";
+
+      // 1. Fetch live parking zones from MySQL
+      try {
+        const zones = await api("/api/parking");
+        let totalCap = 0, totalAvail = 0;
+        zones.forEach(z => {
+          totalCap += Number(z.capacity || 0);
+          totalAvail += Number(z.available_slots || z.available || 0);
+        });
+
+        document.getElementById("statAvailableSlots").textContent = totalAvail.toLocaleString();
+        document.getElementById("statBookedSlots").textContent = Math.max(0, totalCap - totalAvail).toLocaleString();
+        document.getElementById("statActiveZones").textContent = zones.length;
+
+        const container = document.getElementById("zoneOverviewGrid");
+        if (!zones.length) {
+          container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-muted)">No active parking zones available currently.</div>';
+        } else {
+          container.innerHTML = zones.map(z => {
+            const avail = Number(z.available_slots || z.available || 0);
+            const cap = Number(z.capacity || 1);
+            const percent = Math.round((avail / cap) * 100);
+            const occPercent = 100 - percent;
+            return `
+              <div style="background:var(--bg-page);border:1px solid var(--border-light);border-radius:var(--radius-md);padding:16px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                  <strong style="font-size:14px">${escapeHtml(z.name || z.zone_name)}</strong>
+                  <span class="status-tag ${percent < 25 ? 'occupied' : 'available'}">${percent}% Free</span>
+                </div>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">
+                  📍 ${escapeHtml(z.location)} • ₹${z.rate}/hr
+                </div>
+                <div class="progress-track" style="margin-bottom:12px">
+                  <div class="progress-fill" style="width:${occPercent}%;background:${occPercent > 75 ? '#ef4444' : 'var(--primary)'}"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="font-size:11.5px;color:var(--text-muted)"><b>${avail}</b> bays available</span>
+                  <a href="slots.html?zone=${z.id}" class="btn-primary" style="font-size:11px;padding:6px 12px">View Slots →</a>
+                </div>
+              </div>
+            `;
+          }).join("");
+        }
+      } catch (err) {
+        console.error("Failed to load parking zones:", err);
+      }
+
+      // 2. Fetch authenticated customer's own bookings from MySQL
+      try {
+        const bookings = await api(`/api/customer/${user.id}/bookings`);
+        const confirmedBookings = bookings.filter(b => (b.status || "").toLowerCase() === "confirmed");
+        document.getElementById("statMyBookings").textContent = confirmedBookings.length;
+
+        const tbody = document.getElementById("recentBookingsBody");
+        if (!bookings || bookings.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="7" style="text-align:center;padding:36px;color:var(--text-muted)">
+                You haven't booked any parking slots yet. <br>
+                <a href="parking.html" class="btn-primary" style="display:inline-flex;margin-top:12px;font-size:12px">🔍 Find a Parking Slot →</a>
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        tbody.innerHTML = bookings.slice(0, 5).map(b => {
+          const normStatus = (b.status || "Confirmed").toLowerCase();
+          return `
+            <tr>
+              <td>
+                <b style="color:var(--primary);font-family:monospace">${escapeHtml(b.booking_code || ("KP" + b.id))}</b>
+              </td>
+              <td><b>${escapeHtml(b.zone_name)}</b></td>
+              <td><span style="font-family:monospace;font-weight:700;padding:2px 8px;border-radius:4px;background:#f1f5f9">${escapeHtml(b.slot_number || "P--")}</span></td>
+              <td>${escapeHtml(b.vehicle_number)} (${escapeHtml(b.vehicle_type)})</td>
+              <td>${escapeHtml(b.booking_date)} • ${escapeHtml(b.duration)}</td>
+              <td><span class="status-tag ${normStatus}">${escapeHtml(b.status)}</span></td>
+              <td>
+                <button class="btn-secondary" style="font-size:11px;padding:5px 10px" onclick="viewTicket(${b.id})">
+                  🎫 E-Pass
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join("");
+
+      } catch (e) {
+        console.error("Failed to load customer bookings:", e);
+        document.getElementById("recentBookingsBody").innerHTML = `
+          <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted)">Unable to load your bookings.</td></tr>
+        `;
+      }
+    }
+
+    async function viewTicket(id) {
+      try {
+        const b = await api(`/api/bookings/${id}`);
+        openTicketModal(b);
+      } catch (e) {
+        showToast("Error retrieving pass details: " + e.message, "error");
+      }
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>

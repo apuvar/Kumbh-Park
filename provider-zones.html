@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Parking Zones | KumbhPark – Smart Parking System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container" id="appShell">
+    <main class="app-main" id="appMain">
+      <div class="page-body">
+
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:24px">
+          <div>
+            <h2 style="font-size:24px">Managed Parking Zones</h2>
+            <p style="font-size:13px;color:var(--text-muted);margin-top:2px">
+              View, configure and monitor all parking facilities registered under your provider profile.
+            </p>
+          </div>
+          <a href="add-zone.html" class="btn-primary">
+            ➕ Register New Zone
+          </a>
+        </div>
+
+        <div class="dashboard-panel">
+          <div class="table-responsive">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>Zone Name</th>
+                  <th>Location</th>
+                  <th>Capacity</th>
+                  <th>Available</th>
+                  <th>Hourly Rate</th>
+                  <th>Occupancy</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="zonesTableBody">
+                <tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted)">Loading your parking facilities...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script>
+    const user = requireRole("provider");
+
+    async function initProviderZones() {
+      if (!user) return;
+
+      renderAppShell({
+        title: "Parking Zones",
+        activeKey: "provider-zones",
+        subtitle: "Facility List"
+      });
+
+      await loadZones();
+    }
+
+    async function loadZones() {
+      if (!user) return;
+      try {
+        const list = await api(`/api/providers/${user.id}/zones`);
+        const tbody = document.getElementById("zonesTableBody");
+
+        if (!list.length) {
+          tbody.innerHTML = `
+            <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">
+              No parking zones registered yet.<br>
+              <a href="add-zone.html" class="btn-primary" style="display:inline-flex;margin-top:12px;font-size:12px">+ Add Parking Zone</a>
+            </td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = list.map(z => {
+          const avail = Number(z.available_slots || z.available || 0);
+          const cap = Number(z.capacity || 1);
+          const percent = Math.round(((cap - avail) / cap) * 100);
+
+          return `
+            <tr>
+              <td><b style="font-size:14px">${escapeHtml(z.name || z.zone_name)}</b></td>
+              <td>📍 ${escapeHtml(z.location)}</td>
+              <td><b>${cap}</b> spaces</td>
+              <td><strong style="color:var(--primary)">${avail}</strong></td>
+              <td><b>₹${z.rate}/hr</b></td>
+              <td>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div class="progress-track" style="width:70px">
+                    <div class="progress-fill" style="width:${percent}%"></div>
+                  </div>
+                  <span style="font-size:11px;font-weight:700">${percent}%</span>
+                </div>
+              </td>
+              <td>
+                <div style="display:flex;gap:6px">
+                  <a href="manage-slots.html?zone=${z.id}" class="btn-primary" style="font-size:11px;padding:6px 10px">
+                    🎛️ Slots
+                  </a>
+                  <a href="edit-zone.html?id=${z.id}" class="btn-secondary" style="font-size:11px;padding:6px 10px">
+                    ✏️ Edit
+                  </a>
+                  <button class="btn-danger" onclick="removeZone(${z.id}, '${escapeHtml(z.name || z.zone_name)}')">
+                    Delete
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join("");
+
+      } catch (err) {
+        document.getElementById("zonesTableBody").innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted)">Unable to load zones.</td></tr>';
+      }
+    }
+
+    async function removeZone(id, name) {
+      if (!confirm(`Are you sure you want to delete ${name}? All associated slots will be removed.`)) {
+        return;
+      }
+      try {
+        await api(`/api/providers/${user.id}/zones/${id}`, { method: "DELETE" });
+        showToast("Parking zone deleted", "success");
+        loadZones();
+      } catch (e) {
+        showToast(e.message || "Failed to delete zone", "error");
+      }
+    }
+
+    initProviderZones();
+  </script>
+</body>
+</html>
